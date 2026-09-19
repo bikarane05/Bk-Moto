@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BK MOTO - Gestion Flotte & Anti-Double Réservation</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: #f0f4f8; margin: 0; padding: 15px; color: #1e293b; }
+        
+        /* Header Blue & White */
+        .app-header { 
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            padding: 18px 16px;
+            border-radius: 14px;
+            text-align: center;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            border: 1px solid #38bdf8;
+        }
+
+        .header-logo {
+            font-size: 34px;
+            line-height: 1;
+            background: #ffffff;
+            padding: 6px 10px;
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .brand-name { font-size: 24px; font-weight: 900; letter-spacing: 1px; margin: 0; text-transform: uppercase; color: #ffffff; }
+        .brand-subtitle { font-size: 11px; color: #e0f2fe; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+        
+        .card { background: #ffffff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+        
+        /* Message d'erreur / conflit */
+        .alert-error {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #f87171;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 14px;
+            display: none;
+        }
+
+        /* Form Inputs */
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 12px; color: #0284c7; margin-bottom: 4px; font-weight: 700; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; font-size: 14px; color: #0f172a; }
+        input:focus, select:focus { border-color: #0284c7; outline: none; background: #fff; }
+        .form-row { display: flex; gap: 10px; }
+        .form-row > div { flex: 1; }
+        
+        /* Buttons */
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; font-size: 14px; }
+        .btn-clear { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+        .btn-save { background: #0284c7; color: #fff; box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3); }
+        .btn-save:hover { background: #0369a1; }
+        
+        /* Stats Dashboard */
+        .stats-grid { display: flex; gap: 10px; margin-bottom: 10px; }
+        .stat-card { flex: 1; background: #f8fafc; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #e2e8f0; }
+        .stat-num { font-size: 20px; font-weight: bold; color: #0f172a; }
+        .stat-label { font-size: 11px; color: #64748b; margin-top: 2px; }
+        .stat-total-price { background: #e0f2fe; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid #bae6fd; }
+        .stat-total-price .stat-num { color: #0369a1; }
+        .stat-total-price .stat-label { color: #0284c7; font-weight: 600; }
+        
+        /* Filter Tabs */
+        .filter-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+        .tab-btn { flex: 1; padding: 8px; border: 1px solid #0284c7; background: #fff; color: #0284c7; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .tab-btn.active { background: #0284c7; color: #fff; }
+
+        /* List & Cards */
+        .search-box { margin-bottom: 12px; }
+        .location-item { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #fff; position: relative; }
+        .location-header { font-weight: bold; font-size: 15px; color: #0f172a; margin-bottom: 6px; padding-right: 70px; }
+        
+        /* Badges */
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-bottom: 6px; }
+        .badge-active { background: #e0f2fe; color: #0369a1; }
+        .badge-archived { background: #f1f5f9; color: #64748b; }
+        
+        .location-details { font-size: 12px; color: #475569; line-height: 1.5; }
+        .action-btns { position: absolute; right: 12px; top: 12px; display: flex; gap: 6px; }
+        .btn-icon { border: none; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-print { background: #e0f2fe; color: #0284c7; }
+        .btn-delete { background: #ffe4e6; color: #e11d48; }
+
+        /* Ticket / Reçu à imprimer */
+        #printTicketArea { display: none; }
+
+        /* CALENDRIER STYLES */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .calendar-title { font-size: 16px; font-weight: bold; color: #0284c7; }
+        .calendar-nav { display: flex; gap: 6px; }
+        .calendar-nav button { border: 1px solid #0284c7; background: #fff; color: #0284c7; border-radius: 6px; padding: 4px 10px; font-weight: bold; cursor: pointer; }
+
+        .legend { display: flex; gap: 12px; font-size: 11px; margin-bottom: 10px; justify-content: center; }
+        .legend-item { display: flex; align-items: center; gap: 4px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            text-align: center;
+        }
+
+        .calendar-day-head {
+            font-size: 11px;
+            font-weight: bold;
+            color: #64748b;
+            padding: 4px 0;
+        }
+
+        .calendar-day-cell {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            min-height: 52px;
+            padding: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .calendar-day-cell:hover { border-color: #0284c7; }
+
+        .calendar-day-number { font-size: 12px; font-weight: bold; color: #1e293b; }
+
+        /* Couleurs du calendrier d'occupation */
+        .calendar-day-cell.status-full { background: #fef2f2; border: 1.5px solid #ef4444; }
+        .calendar-day-cell.status-full .calendar-day-number { color: #dc2626; }
+
+        .calendar-day-cell.status-partial { background: #fefce8; border: 1.5px solid #eab308; }
+        .calendar-day-cell.status-partial .calendar-day-number { color: #ca8a04; }
+
+        .calendar-day-cell.status-free { background: #f0fdf4; border: 1px solid #bbf7d0; }
+
+        .moto-badge-count {
+            font-size: 9px;
+            font-weight: bold;
+            padding: 2px 4px;
+            border-radius: 8px;
+            margin-top: 2px;
+        }
+        .bg-red { background: #ef4444; color: #fff; }
+        .bg-yellow { background: #eab308; color: #fff; }
+
+        /* Active / Selected Zoomed Day */
+        .calendar-day-cell.selected-day {
+            transform: scale(1.18);
+            z-index: 10;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+            border-color: #0284c7 !important;
+        }
+
+        /* Selected Rentals Details Panel */
+        .day-details-panel {
+            margin-top: 15px;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 12px;
+            display: none;
+        }
+        .day-details-title { font-size: 13px; font-weight: bold; color: #0284c7; margin-bottom: 8px; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printTicketArea, #printTicketArea * { visibility: visible; }
+            #printTicketArea {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                max-width: 320px;
+                background: #ffffff !important;
+                color: #000000 !important;
+                padding: 10px;
+                font-family: Arial, sans-serif;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- App Main Container -->
+    <div id="mainApp">
+        <!-- Header BK MOTO Blue & White -->
+        <div class="app-header">
+            <div class="header-logo">🛵</div>
+            <div style="text-align: left;">
+                <div class="brand-name">BK MOTO</div>
+                <div class="brand-subtitle">Flotte & Anti-Doublon</div>
+            </div>
+        </div>
+
+        <!-- Form Container -->
+        <div class="card">
+            <!-- Box Alert Conflit -->
+            <div id="errorAlert" class="alert-error"></div>
+
+            <form id="rentalForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nom</label>
+                        <input type="text" id="lastName" placeholder="Ex. Hhhh" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Prénom</label>
+                        <input type="text" id="firstName" placeholder="Ex. Bbb" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Sélectionner la Moto Exacte</label>
+                        <select id="motoSelect" required>
+                            <option value="">-- Choisir Moto & N° --</option>
+                            <option value="Austin Rebecca S (#1)">Austin Rebecca S (#1)</option>
+                            <option value="Austin Rebecca S (#2)">Austin Rebecca S (#2)</option>
+                            <option value="Cappuccino Teamo (#1)">Cappuccino Teamo (#1)</option>
+                            <option value="Cappuccino Teamo (#2)">Cappuccino Teamo (#2)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Téléphone</label>
+                        <input type="tel" id="clientPhone" placeholder="Ex. 06xxxxxxxx" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Prix / jour (DH)</label>
+                        <input type="number" id="dailyPrice" placeholder="Ex. 260" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Départ</label>
+                        <input type="date" id="startDate" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Retour prévu</label>
+                    <input type="date" id="endDate" required>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-clear" onclick="resetForm()">Nouveau / Vider</button>
+                    <button type="submit" class="btn btn-save">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="card">
+            <h3 style="margin-top:0; font-size:14px; color:#0284c7;">Résumé</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-num" id="totalCount">0</div>
+                    <div class="stat-label">Total Locations</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="activeCount" style="color:#0284c7;">0</div>
+                    <div class="stat-label">En cours</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="archivedCount" style="color:#64748b;">0</div>
+                    <div class="stat-label">Terminées</div>
+                </div>
+            </div>
+            <div class="stat-total-price">
+                <div class="stat-num" id="totalRevenue">0 DH</div>
+                <div class="stat-label">Chiffre d'affaires total prévu</div>
+            </div>
+        </div>
+
+        <!-- Rentals List Section -->
+        <div class="card">
+            <h3 style="margin-top:0; font-size:16px; color:#0f172a;">Locations</h3>
+            
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Rechercher par nom, prénom ou moto..." oninput="renderList()">
+            </div>
+
+            <div class="filter-tabs">
+                <button class="tab-btn active" onclick="setFilter('all', this)">Toutes</button>
+                <button class="tab-btn" onclick="setFilter('en_cours', this)">En cours</button>
+                <button class="tab-btn" onclick="setFilter('terminee', this)">Terminées / Archivées</button>
+            </div>
+
+            <div id="locationsList"></div>
+        </div>
+
+        <!-- Calendrier d'occupation de Flotte -->
+        <div class="card">
+            <div class="calendar-header">
+                <div class="calendar-title" id="calendarMonthTitle">Mois 2026</div>
+                <div class="calendar-nav">
+                    <button onclick="changeMonth(-1)">&lt;</button>
+                    <button onclick="changeMonth(1)">&gt;</button>
+                </div>
+            </div>
+
+            <div class="legend">
+                <div class="legend-item"><div class="legend-dot" style="background:#22c55e;"></div> Tous dispo</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#eab308;"></div> Partiel</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#ef4444;"></div> Complet (Tout pris)</div>
+            </div>
+
+            <div class="calendar-grid">
+                <div class="calendar-day-head">Lun</div>
+                <div class="calendar-day-head">Mar</div>
+                <div class="calendar-day-head">Mer</div>
+                <div class="calendar-day-head">Jeu</div>
+                <div class="calendar-day-head">Ven</div>
+                <div class="calendar-day-head">Sam</div>
+                <div class="calendar-day-head">Dim</div>
+            </div>
+
+            <div class="calendar-grid" id="calendarDaysGrid" style="margin-top:6px;"></div>
+
+            <!-- Panel de détail d'un jour sélectionné -->
+            <div id="dayDetailsPanel" class="day-details-panel">
+                <div class="day-details-title" id="selectedDateTitle">État du garage le...</div>
+                <div id="selectedDateContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Printing Container -->
+    <div id="printTicketArea"></div>
+
+    <script>
+        // Flotte exacte (4 motos)
+        const ALL_MOTOS = [
+            "Austin Rebecca S (#1)",
+            "Austin Rebecca S (#2)",
+            "Cappuccino Teamo (#1)",
+            "Cappuccino Teamo (#2)"
+        ];
+
+        let rentals = JSON.parse(localStorage.getItem('bk_rentals')) || [
+            { id: 1, lastName: "Hhhh", firstName: "Bbb", moto: "Austin Rebecca S (#1)", phone: "0699888", price: 260, startDate: "2026-09-15", endDate: "2026-09-19" }
+        ];
+
+        let currentFilter = 'all';
+        let currentDate = new Date();
+        let selectedDayCell = null;
+
+        const todayStr = currentDate.toISOString().split('T')[0];
+        document.getElementById('startDate').value = todayStr;
+
+        // Fonction d'éradication des doubles réservations
+        function checkConflict(selectedMoto, newStart, newEnd) {
+            const nStart = new Date(newStart);
+            const nEnd = new Date(newEnd);
+
+            for (let r of rentals) {
+                if (r.moto === selectedMoto) {
+                    const rStart = new Date(r.startDate);
+                    const rEnd = new Date(r.endDate);
+
+                    // Chevauchement de dates
+                    if (nStart <= rEnd && nEnd >= rStart) {
+                        return r;
+                    }
+                }
+            }
+            return null;
+        }
+
+        document.getElementById('rentalForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const moto = document.getElementById('motoSelect').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const errorBox = document.getElementById('errorAlert');
+
+            if (new Date(startDate) > new Date(endDate)) {
+                errorBox.style.display = 'block';
+                errorBox.innerText = "⚠️ La date de départ doit être antérieure ou égale à la date de retour !";
+                return;
+            }
+
+            // Verification anti-doublon
+            const conflict = checkConflict(moto, startDate, endDate);
+            if (conflict) {
+                errorBox.style.display = 'block';
+                errorBox.innerHTML = `⚠️ <strong>Réservation impossible !</strong><br>La moto <strong>${moto}</strong> est déjà louée du <strong>${conflict.startDate}</strong> au <strong>${conflict.endDate}</strong> par <strong>${conflict.lastName} ${conflict.firstName}</strong>.`;
+                return;
+            }
+
+            errorBox.style.display = 'none';
+
+            rentals.push({
+                id: Date.now(),
+                lastName: document.getElementById('lastName').value,
+                firstName: document.getElementById('firstName').value,
+                moto: moto,
+                phone: document.getElementById('clientPhone').value,
+                price: parseFloat(document.getElementById('dailyPrice').value),
+                startDate: startDate,
+                endDate: endDate
+            });
+
+            saveData();
+            resetForm();
+            renderList();
+            renderCalendar();
+        });
+
+        function saveData() { localStorage.setItem('bk_rentals', JSON.stringify(rentals)); }
+        function resetForm() { 
+            document.getElementById('rentalForm').reset(); 
+            document.getElementById('startDate').value = todayStr; 
+            document.getElementById('errorAlert').style.display = 'none';
+        }
+
+        function setFilter(filter, btn) {
+            currentFilter = filter;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderList();
+        }
+
+        function calculateDays(start, end) {
+            const diff = Math.abs(new Date(end) - new Date(start));
+            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            return days === 0 ? 1 : days;
+        }
+
+        function getUpdatedRentals() {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            return rentals.map(item => {
+                const endDate = new Date(item.endDate);
+                endDate.setHours(0,0,0,0);
+                return { ...item, status: endDate < today ? 'Terminée' : 'En cours' };
+            });
+        }
+
+        function printRental(id) {
+            const item = rentals.find(r => r.id === id);
+            if(!item) return;
+
+            const days = calculateDays(item.startDate, item.endDate);
+            const totalPrice = item.price * days;
+            const printBox = document.getElementById('printTicketArea');
+
+            printBox.innerHTML = `
+                <div style="border: 1px solid #000; padding: 12px; text-align: left;">
+                    <div style="text-align: center; border-bottom: 1px solid #000; padding-bottom: 8px; margin-bottom: 10px;">
+                        <h3 style="margin: 0; font-size: 18px; text-transform: uppercase; color: #000;">REÇU DE LOCATION</h3>
+                    </div>
+                    
+                    <div style="font-size: 13px; line-height: 1.6; color: #000;">
+                        <p style="margin: 4px 0;"><strong>Client:</strong> ${item.lastName || ''} ${item.firstName || ''}</p>
+                        <p style="margin: 4px 0;"><strong>Téléphone:</strong> ${item.phone}</p>
+                        <p style="margin: 4px 0;"><strong>Moto:</strong> ${item.moto}</p>
+                        <p style="margin: 4px 0;"><strong>Du:</strong> ${item.startDate} <strong>Au:</strong> ${item.endDate} (${days} j)</p>
+                        <p style="margin: 4px 0;"><strong>Prix/Jour:</strong> ${item.price} DH</p>
+                    </div>
+
+                    <div style="margin-top: 12px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 8px 0; text-align: center;">
+                        <span style="font-size: 12px; font-weight: bold;">MONTANT TOTAL</span>
+                        <div style="font-size: 20px; font-weight: bold; margin-top: 2px;">${totalPrice} DH</div>
+                    </div>
+
+                    <div style="margin-top: 10px; text-align: center; font-size: 10px;">
+                        Merci pour votre confiance !
+                    </div>
+                </div>
+            `;
+
+            window.print();
+        }
+
+        function deleteRental(id) {
+            if(confirm("Voulez-vous supprimer cette location ?")) {
+                rentals = rentals.filter(r => r.id !== id);
+                saveData();
+                renderList();
+                renderCalendar();
+            }
+        }
+
+        function renderList() {
+            const updatedList = getUpdatedRentals();
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const container = document.getElementById('locationsList');
+            container.innerHTML = '';
+
+            let totalRev = 0, activeCount = 0, archivedCount = 0;
+
+            updatedList.forEach(item => {
+                const days = calculateDays(item.startDate, item.endDate);
+                totalRev += (item.price * days);
+                if(item.status === 'En cours') activeCount++;
+                if(item.status === 'Terminée') archivedCount++;
+            });
+
+            document.getElementById('totalCount').innerText = updatedList.length;
+            document.getElementById('activeCount').innerText = activeCount;
+            document.getElementById('archivedCount').innerText = archivedCount;
+            document.getElementById('totalRevenue').innerText = totalRev + " DH";
+
+            const filtered = updatedList.filter(item => {
+                const fullName = `${item.lastName || ''} ${item.firstName || ''}`.toLowerCase();
+                const matches = fullName.includes(searchQuery) || item.moto.toLowerCase().includes(searchQuery);
+                if(!matches) return false;
+                if(currentFilter === 'en_cours') return item.status === 'En cours';
+                if(currentFilter === 'terminee') return item.status === 'Terminée';
+                return true;
+            });
+
+            if(filtered.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-size:13px;">Aucune location trouvée</div>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const days = calculateDays(item.startDate, item.endDate);
+                const isArchived = item.status === 'Terminée';
+                const displayName = `${item.lastName || ''} ${item.firstName || ''}`.trim();
+
+                const card = document.createElement('div');
+                card.className = 'location-item';
+                card.innerHTML = `
+                    <div class="action-btns">
+                        <button class="btn-icon btn-print" title="Imprimer le reçu" onclick="printRental(${item.id})">🖨️</button>
+                        <button class="btn-icon btn-delete" title="Supprimer" onclick="deleteRental(${item.id})">✕</button>
+                    </div>
+                    <div class="location-header">${displayName} - ${item.moto}</div>
+                    <span class="badge ${isArchived ? 'badge-archived' : 'badge-active'}">
+                        ${isArchived ? '🏁 Terminée (Archivée)' : '🟢 En cours'}
+                    </span>
+                    <div class="location-details">
+                        📞 ${item.phone} | 💰 <strong>${item.price * days} DH</strong> (${item.price} DH/j)<br>
+                        📅 Du ${item.startDate} au ${item.endDate} (${days} j)
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        /* --- LOGIQUE CALENDRIER FLOTTE --- */
+        function changeMonth(dir) {
+            currentDate.setMonth(currentDate.getMonth() + dir);
+            renderCalendar();
+        }
+
+        function getRentalsForDate(dateStr) {
+            return rentals.filter(r => dateStr >= r.startDate && dateStr <= r.endDate);
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarDaysGrid');
+            grid.innerHTML = '';
+
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+            document.getElementById('calendarMonthTitle').innerText = `${monthNames[month]} ${year}`;
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            let startOffset = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+
+            for(let i = 0; i < startOffset; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            for(let day = 1; day <= daysInMonth; day++) {
+                const dayNum = day < 10 ? '0' + day : day;
+                const monthNum = (month + 1) < 10 ? '0' + (month + 1) : (month + 1);
+                const dateFormatted = `${year}-${monthNum}-${dayNum}`;
+
+                const activeRentals = getRentalsForDate(dateFormatted);
+                const countTaken = activeRentals.length;
+
+                const cell = document.createElement('div');
+                cell.className = 'calendar-day-cell';
+
+                if (countTaken === ALL_MOTOS.length) {
+                    cell.classList.add('status-full');
+                } else if (countTaken > 0) {
+                    cell.classList.add('status-partial');
+                } else {
+                    cell.classList.add('status-free');
+                }
+
+                cell.innerHTML = `
+                    <div class="calendar-day-number">${day}</div>
+                    ${countTaken > 0 ? `<div class="moto-badge-count ${countTaken === ALL_MOTOS.length ? 'bg-red' : 'bg-yellow'}">🛵 ${countTaken}/${ALL_MOTOS.length}</div>` : ''}
+                `;
+
+                cell.onclick = function() {
+                    if(selectedDayCell) selectedDayCell.classList.remove('selected-day');
+                    cell.classList.add('selected-day');
+                    selectedDayCell = cell;
+                    showDayDetails(dateFormatted, activeRentals);
+                };
+
+                grid.appendChild(cell);
+            }
+        }
+
+        function showDayDetails(dateStr, dayRentals) {
+            const panel = document.getElementById('dayDetailsPanel');
+            const title = document.getElementById('selectedDateTitle');
+            const content = document.getElementById('selectedDateContent');
+
+            panel.style.display = 'block';
+            title.innerText = `📌 État de la flotte le ${dateStr}`;
+
+            let html = '';
+
+            ALL_MOTOS.forEach(moto => {
+                const rental = dayRentals.find(r => r.moto === moto);
+                if (rental) {
+                    html += `
+                        <div style="background:#fef2f2; border:1px solid #fca5a5; padding:8px 10px; border-radius:6px; margin-top:6px; font-size:12px;">
+                            <strong style="color:#dc2626;">🔴 PRIS: ${moto}</strong><br>
+                            Client: ${rental.lastName || ''} ${rental.firstName || ''} | 📞 ${rental.phone}
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div style="background:#f0fdf4; border:1px solid #86efac; padding:6px 10px; border-radius:6px; margin-top:4px; font-size:12px; color:#166534;">
+                            <strong>🟢 DISPONIBLE: ${moto}</strong>
+                        </div>
+                    `;
+                }
+            });
+
+            content.innerHTML = html;
+        }
+
+        renderList();
+        renderCalendar();
+    </script>
+</body>
+</html>
